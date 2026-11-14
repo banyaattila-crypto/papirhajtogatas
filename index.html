@@ -129,6 +129,32 @@
     .animate-wheat-drop {
       animation: wheatFall 0.95s ease-out forwards;
     }
+
+    /* 3D lassan körbeforgó logó animáció */
+    .logo-3d-scene {
+      perspective: 700px;
+    }
+    @keyframes spin3dSlow {
+      0% { transform: rotateY(0deg) rotateX(12deg); }
+      50% { transform: rotateY(180deg) rotateX(-12deg); }
+      100% { transform: rotateY(360deg) rotateX(12deg); }
+    }
+    .logo-3d-object {
+      transform-style: preserve-3d;
+      animation: spin3dSlow 11s linear infinite;
+    }
+    .logo-3d-object:hover {
+      animation-duration: 3.5s;
+    }
+    .logo-face-front {
+      transform: translateZ(10px);
+    }
+    .logo-face-back {
+      transform: rotateY(180deg) translateZ(10px);
+    }
+    .logo-face-mid {
+      transform: translateZ(0px);
+    }
   </style>
 </head>
 <body class="bg-[#030712] text-slate-100 antialiased selection:bg-cyan-500/30 overflow-x-hidden font-['Inter',sans-serif]">
@@ -727,14 +753,62 @@
           {/* FEJLÉC */}
           <header className="relative z-10 pt-6 pb-5 px-4 sm:px-6 max-w-7xl mx-auto border-b border-slate-800/80">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono uppercase tracking-wider mb-2.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Mobilra Optimalizált Tudományos Szimulátor (0–100)
+              <div className="flex items-start sm:items-center gap-4">
+                {/* 3D Lassan Körbeforgó Origami Logó a bal felső sarokban */}
+                <div
+                  onClick={() => triggerAnimatedFold(Math.min(100, folds + 1))}
+                  title="Kattints a logóra a következő hajtáshoz!"
+                  className="logo-3d-scene shrink-0 cursor-pointer select-none pt-1 sm:pt-0"
+                >
+                  <div className="logo-3d-object relative w-14 h-14 sm:w-16 sm:h-16">
+                    {/* Középső ragyogó mag */}
+                    <div className="logo-face-mid absolute inset-1 rounded-2xl bg-cyan-400/20 blur-md" />
+                    {/* Előlap */}
+                    <div className="logo-face-front absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-600 to-purple-700 p-[2px] shadow-[0_0_25px_rgba(34,211,238,0.45)]">
+                      <div className="w-full h-full rounded-[14px] bg-slate-950/90 flex flex-col items-center justify-center relative overflow-hidden">
+                        {/* Hajtott sarok effekt */}
+                        <div className="absolute top-0 right-0 w-4 h-4 bg-gradient-to-bl from-cyan-300 to-blue-500 rounded-bl-lg opacity-90" />
+                        <svg viewBox="0 0 36 36" className="w-7 h-7 sm:w-8 sm:h-8 text-cyan-300">
+                          <polygon points="6,24 18,16 30,24 18,31" fill="rgba(34,211,238,0.2)" stroke="currentColor" strokeWidth="1.8" />
+                          <polygon points="6,18 18,10 30,18 18,25" fill="rgba(168,85,247,0.25)" stroke="#c084fc" strokeWidth="1.8" />
+                          <polygon points="6,12 18,4 30,12 18,19" fill="rgba(56,189,248,0.35)" stroke="#ffffff" strokeWidth="1.8" />
+                        </svg>
+                        <span className="text-[9px] font-mono font-black tracking-tighter text-cyan-300 -mt-0.5">
+                          2ⁿ LAB
+                        </span>
+                      </div>
+                    </div>
+                    {/* Hátlap */}
+                    <div className="logo-face-back absolute inset-0 rounded-2xl bg-gradient-to-tr from-amber-400 via-purple-600 to-cyan-500 p-[2px] shadow-[0_0_25px_rgba(192,132,252,0.45)]">
+                      <div className="w-full h-full rounded-[14px] bg-slate-950/95 flex flex-col items-center justify-center">
+                        <span className="font-fraunces text-base sm:text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-cyan-300">
+                          2<sup className="text-xs text-amber-300">100</sup>
+                        </span>
+                        <span className="text-[8px] font-mono uppercase tracking-widest text-purple-300">
+                          v1.4.0
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <h1 className="font-fraunces text-3xl sm:text-5xl font-black tracking-tight leading-tight title-gradient-cosmic">
-                  Hányszor lehet félbehajtani egy papírt?
-                </h1>
+
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono uppercase tracking-wider">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Mobilra Optimalizált Tudományos Szimulátor (0–100)
+                    </div>
+                    <span
+                      title="Semantic Versioning (MAJOR.MINOR.PATCH)"
+                      className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/40 text-purple-300 text-xs font-mono font-bold"
+                    >
+                      v1.4.0 (SemVer)
+                    </span>
+                  </div>
+                  <h1 className="font-fraunces text-2xl sm:text-5xl font-black tracking-tight leading-tight title-gradient-cosmic">
+                    Hányszor lehet félbehajtani egy papírt?
+                  </h1>
+                </div>
               </div>
 
               <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 w-full lg:w-auto lg:min-w-[330px]">
@@ -1413,6 +1487,19 @@
               </div>
             </section>
           </main>
+
+          {/* LÁBLÉC: Semantic Versioning (SemVer 2.0.0) Verziószám */}
+          <footer className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-4 border-t border-slate-800/80 text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 font-mono">
+              <span className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-bold">
+                v1.4.0
+              </span>
+              <span>• SemVer 2.0.0 (MAJOR.MINOR.PATCH)</span>
+            </div>
+            <div className="text-center sm:text-right text-[11px] text-slate-500 font-mono">
+              1 (Stabil kiadás) . 4 (0–100 hajtás, Gallivan-képlet, Sakktábla, 3D Logó) . 0 (Hibamentes)
+            </div>
+          </footer>
         </div>
       );
     };
