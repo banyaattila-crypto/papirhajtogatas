@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="hu" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#030712" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Hányszor lehet félbehajtani egy papírt? (0–100)</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Fraunces (a vastag főcímekhez) & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- React 18 & Babel CDN az önálló böngészős futtatáshoz -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    /* Mobil csúszka (slider) érintésbarát kialakítása */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 14px;
+      border-radius: 999px;
+      background: #1e293b;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #22d3ee;
+      cursor: pointer;
+      border: 3px solid #030712;
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.7);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #22d3ee;
+      cursor: pointer;
+      border: 3px solid #030712;
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.7);
+    }
+    /* Finom görgetősáv */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 999px;
+    }
+
+    /* Google Fraunces betűtípus és áramló színátmenet a főcímekhez */
+    .font-fraunces {
+      font-family: 'Fraunces', Georgia, serif;
+      font-variation-settings: "SOFT" 50, "WONK" 1;
+    }
+
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .title-gradient-cosmic {
+      background: linear-gradient(120deg, #ffffff 0%, #38bdf8 30%, #c084fc 65%, #f472b6 100%);
+      background-size: 220% 220%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientFlow 7s ease infinite;
+    }
+
+    .title-gradient-gold {
+      background: linear-gradient(120deg, #fef08a 0%, #f59e0b 40%, #34d399 80%, #fde047 100%);
+      background-size: 220% 220%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientFlow 6s ease infinite;
+    }
+
+    .title-gradient-amber {
+      background: linear-gradient(120deg, #ffffff 0%, #fbbf24 45%, #fb7185 100%);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientFlow 8s ease infinite;
+    }
+
+    /* Finom lebegő animáció az ikonoknak */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-7px) rotate(3deg); }
+    }
+    .animate-float {
+      animation: floatSlow 4.5s ease-in-out infinite;
+    }
+
+    /* Origami lap félbehajtás animáció (amikor nő a hajtásszám) */
+    @keyframes origamiFoldPulse {
+      0% { transform: perspective(600px) rotateY(0deg) scale(0.85); opacity: 0; }
+      25% { opacity: 1; }
+      60% { transform: perspective(600px) rotateY(-165deg) scale(1.05); opacity: 0.95; }
+      100% { transform: perspective(600px) rotateY(-180deg) scale(0.9); opacity: 0; }
+    }
+    .animate-origami-fold {
+      animation: origamiFoldPulse 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* Arany búzaszem hullás animáció a sakktábla fölött */
+    @keyframes wheatFall {
+      0% { transform: translateY(-18px) rotate(0deg) scale(0.7); opacity: 0; }
+      20% { opacity: 1; }
+      100% { transform: translateY(45px) rotate(140deg) scale(1.1); opacity: 0; }
+    }
+    .animate-wheat-drop {
+      animation: wheatFall 0.95s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="bg-[#030712] text-slate-100 antialiased selection:bg-cyan-500/30 overflow-x-hidden font-['Inter',sans-serif]">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect, useCallback, useRef } = React;
+
+    // Saját beépített SVG ikonok
+    const IconWrapper = ({ children, className = 'w-5 h-5' }) => (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+      >
+        {children}
+      </svg>
+    );
+
+    const Calculator = ({ className }) => (
+      <IconWrapper className={className}>
+        <rect x="4" y="2" width="16" height="20" rx="2" />
+        <line x1="8" y1="6" x2="16" y2="6" />
+        <line x1="16" y1="14" x2="16" y2="18" />
+        <path d="M16 10h.01" />
+        <path d="M12 10h.01" />
+        <path d="M8 10h.01" />
+        <path d="M12 14h.01" />
+        <path d="M8 14h.01" />
+        <path d="M12 18h.01" />
+        <path d="M8 18h.01" />
+      </IconWrapper>
+    );
+
+    const Play = ({ className }) => (
+      <IconWrapper className={className}>
+        <polygon points="5 3 19 12 5 21 5 3" />
+      </IconWrapper>
+    );
+
+    const Pause = ({ className }) => (
+      <IconWrapper className={className}>
+        <rect x="6" y="4" width="4" height="16" />
+        <rect x="14" y="4" width="4" height="16" />
+      </IconWrapper>
+    );
+
+    const RotateCcw = ({ className }) => (
+      <IconWrapper className={className}>
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+      </IconWrapper>
+    );
+
+    const ChevronRight = ({ className }) => (
+      <IconWrapper className={className}>
+        <polyline points="9 18 15 12 9 6" />
+      </IconWrapper>
+    );
+
+    const ChevronLeft = ({ className }) => (
+      <IconWrapper className={className}>
+        <polyline points="15 18 9 12 15 6" />
+      </IconWrapper>
+    );
+
+    const Sparkles = ({ className }) => (
+      <IconWrapper className={className}>
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+      </IconWrapper>
+    );
+
+    const Flame = ({ className }) => (
+      <IconWrapper className={className}>
+        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+      </IconWrapper>
+    );
+
+    const Award = ({ className }) => (
+      <IconWrapper className={className}>
+        <circle cx="12" cy="8" r="6" />
+        <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+      </IconWrapper>
+    );
+
+    const BookOpen = ({ className }) => (
+      <IconWrapper className={className}>
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+      </IconWrapper>
+    );
+
+    const Activity = ({ className }) => (
+      <IconWrapper className={className}>
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </IconWrapper>
+    );
+
+    const CheckCircle2 = ({ className }) => (
+      <IconWrapper className={className}>
+        <circle cx="12" cy="12" r="10" />
+        <path d="m9 12 2 2 4-4" />
+      </IconWrapper>
+    );
+
+    const AlertTriangle = ({ className }) => (
+      <IconWrapper className={className}>
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </IconWrapper>
+    );
+
+    const Sliders = ({ className }) => (
+      <IconWrapper className={className}>
+        <line x1="4" y1="21" x2="4" y2="14" />
+        <line x1="4" y1="10" x2="4" y2="3" />
+        <line x1="12" y1="21" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12" y2="3" />
+        <line x1="20" y1="21" x2="20" y2="16" />
+        <line x1="20" y1="12" x2="20" y2="3" />
+        <line x1="2" y1="14" x2="6" y2="14" />
+        <line x1="10" y1="8" x2="14" y2="8" />
+        <line x1="18" y1="16" x2="22" y2="16" />
+      </IconWrapper>
+    );
+
+    // Papír presetek
+    const PAPER_PRESETS = [
+      {
+        id: 'a4',
+        name: 'Normál A4 irodai papír (80 g/m²)',
+        t0: 0.1,
+        L0: 297,
+        desc: 'Hétköznapi nyomtatópapír (210 × 297 mm)',
+        maxRealFolds: 7
+      },
+      {
+        id: 'tissue',
+        name: 'Extra vékony selyempapír',
+        t0: 0.05,
+        L0: 1000,
+        desc: 'Félvastagságú, hajlékony rostos papír',
+        maxRealFolds: 8
+      },
+      {
+        id: 'mythbusters',
+        name: 'MythBusters óriáspapír (Focipálya)',
+        t0: 0.1,
+        L0: 67100,
+        desc: '51,8 × 67,1 m-es ragasztott NASA hangár-méret',
+        maxRealFolds: 11
+      },
+      {
+        id: 'gallivan',
+        name: 'Britney Gallivan rekordtekercs (2002)',
+        t0: 0.065,
+        L0: 1200000,
+        desc: '1200 méter hosszú speciális egyedi tekercs',
+        maxRealFolds: 12
+      },
+      {
+        id: 'mit',
+        name: 'MIT & St. Mark’s rekordtekercs (2011)',
+        t0: 0.06,
+        L0: 16000000,
+        desc: '16 km hosszú papírfolyosó az MIT Infinite Corridorban',
+        maxRealFolds: 13
+      }
+    ];
+
+    // 0-tól 100-ig terjedő mérföldkövek
+    const MILESTONES = [
+      { n: 0, title: 'Egyetlen papírlap', refSize: '0,1 mm', category: 'Mikro', icon: '📄', color: 'text-slate-300', border: 'border-slate-500/40', desc: 'Egy szabványos 80 g/m²-es A4-es irodai papírlap alapvastagsága.', realObject: 'A4-es papírlap (0,1 mm)' },
+      { n: 1, title: 'Emberi hajszál', refSize: '0,2 mm', category: 'Mikro', icon: '🪡', color: 'text-cyan-300', border: 'border-cyan-500/40', desc: 'Az első félbehajtás után 2 rétegünk van, ami egy vastagabb emberi hajszálnak felel meg.', realObject: 'Vastag hajszál (~0,18 mm)' },
+      { n: 3, title: 'Bankkártya vastagsága', refSize: '0,8 mm', category: 'Mikro', icon: '💳', color: 'text-blue-300', border: 'border-blue-500/40', desc: '8 réteg papír (2³). Pontosan olyan vastag, mint egy szabványos ISO/IEC 7810 bankkártya (0,76 mm).', realObject: 'Bankkártya (0,76 mm)' },
+      { n: 7, title: 'Hétköznapi A4 fizikai határ', refSize: '1,28 cm', category: 'Emberi', icon: '🛑', color: 'text-amber-400', border: 'border-amber-500/50', desc: '128 réteg. Egy normál A4-es lapnál itt fogy el a hajlítható szabad hossz: a belső ív összenyomódik, a külső elszakad.', realObject: 'Keményfedeles könyv (1,3 cm)' },
+      { n: 8, title: 'MythBusters: Emberi erő rekord', refSize: '2,56 cm', category: 'Rekord', icon: '💪', color: 'text-orange-400', border: 'border-orange-500/50', desc: '256 réteg. A MythBusters csapata egy focipálya méretű papírt puszta emberi erővel 8-szor tudott félbehajtani.', realObject: 'Colos deszka (2,54 cm)' },
+      { n: 11, title: 'MythBusters: Úthenger rekord', refSize: '20,48 cm', category: 'Rekord', icon: '🚜', color: 'text-yellow-400', border: 'border-yellow-500/50', desc: '2 048 réteg. Amikor a MythBusters egy nehéz úthengerrel és targoncával is besegített, 11 hajtásig jutottak.', realObject: 'Kézi bowlinggolyó (21 cm)' },
+      { n: 12, title: 'Britney Gallivan Guinness-rekord', refSize: '40,96 cm', category: 'Rekord', icon: '🏆', color: 'text-emerald-400', border: 'border-emerald-500/50', desc: '4 096 réteg. Britney Gallivan 2002-ben egy 1200 méteres tekercsből elsőként érte el a 12 hajtást, igazolva saját képletét.', realObject: 'Lábszármagasság (~41 cm)' },
+      { n: 13, title: 'MIT Abszolút Világrekord', refSize: '81,92 cm', category: 'Rekord', icon: '🎓', color: 'text-teal-300', border: 'border-teal-500/50', desc: '8 192 réteg. Az MIT diákjai 2011-ben 16 kilométernyi papírból állították fel a jelenlegi 13 hajtásos világrekordot.', realObject: 'Íróasztal magassága (80 cm)' },
+      { n: 14, title: 'Átlagos emberi magasság', refSize: '1,64 m', category: 'Emberi', icon: '🧍', color: 'text-green-400', border: 'border-green-500/40', desc: '16 384 réteg. A papírtorony már szemmagasságba érne, miközben egy A4-es lap szélessége mikroszkopikusra zsugorodna.', realObject: 'Felnőtt ember (1,65 m)' },
+      { n: 17, title: 'Társasház magassága', refSize: '13,11 m', category: 'Építészet', icon: '🏢', color: 'text-sky-400', border: 'border-sky-500/40', desc: '131 072 réteg. Három hajtással az emberi magasság után már egy 4 emeletes panelház tetejénél járunk.', realObject: '4 emeletes épület (~13 m)' },
+      { n: 20, title: 'Országház / Gellért-hegy', refSize: '104,86 m', category: 'Építészet', icon: '🏛️', color: 'text-indigo-400', border: 'border-indigo-500/40', desc: '1 048 576 (több mint egymillió) réteg! Magasabb, mint a budapesti Parlament kupolája (96 m).', realObject: 'Budapesti Parlament (96 m)' },
+      { n: 23, title: 'Burj Khalifa felhőkarcoló', refSize: '838,86 m', category: 'Építészet', icon: '🏙️', color: 'text-purple-400', border: 'border-purple-500/40', desc: '8,38 millió réteg. Lehagyja a világ legmagasabb ember alkotta épületét, a dubaji Burj Khalifát (828 m).', realObject: 'Burj Khalifa (828 m)' },
+      { n: 27, title: 'Mount Everest és Sztratoszféra', refSize: '13,42 km', category: 'Földi', icon: '⛰️', color: 'text-pink-400', border: 'border-pink-500/40', desc: '134 millió réteg. Magasan a Mount Everest (8,84 km) felett, az utasszállító repülőgépek utazómagasságában.', realObject: 'Utasszállító repülő (11-13 km)' },
+      { n: 30, title: 'Kármán-vonal (A világűr határa)', refSize: '107,37 km', category: 'Bolygó', icon: '🚀', color: 'text-rose-400', border: 'border-rose-500/40', desc: '1,07 milliárd réteg. Átlépjük a 100 km-es Kármán-vonalat, ahol a földi légkör átadja a helyét a világűrnek.', realObject: 'Kármán-vonal (100 km)' },
+      { n: 37, title: 'Föld átmérője', refSize: '13 744 km', category: 'Bolygó', icon: '🌍', color: 'text-blue-400', border: 'border-blue-500/40', desc: '137,4 milliárd réteg. A papíroszlop vastagsága meghaladja a Föld teljes egyenlítői átmérőjét (12 742 km).', realObject: 'A Föld átmérője (12 742 km)' },
+      { n: 42, title: 'Eléri a Holdat!', refSize: '439 805 km', category: 'Bolygó', icon: '🌕', color: 'text-yellow-300', border: 'border-yellow-400/50', desc: '4,4 billió réteg. 42 hajtás elég ahhoz, hogy a papírunk a Földről indulva túlérjen a Holdon (384 400 km)!', realObject: 'Föld–Hold távolság (384 400 km)' },
+      { n: 51, title: 'Túlér a Napon (1,5 CSE)', refSize: '225,18 millió km', category: 'Csillagászati', icon: '☀️', color: 'text-amber-500', border: 'border-amber-500/60', desc: '2,25 billiárd réteg. Meghaladja a Föld–Nap távolságot (149,6 millió km), és már a Mars pályájánál jár.', realObject: 'Föld–Nap távolság (149,6M km)' },
+      { n: 56, title: 'Túl a Plútón és a Kuiper-övön', refSize: '7,21 milliárd km', category: 'Csillagászati', icon: '🪐', color: 'text-violet-400', border: 'border-violet-500/50', desc: '72 billiárd réteg. Elhagyjuk a Naprendszer legtávolabbi bolygóit és a Plútó pályáját (~5,9 milliárd km).', realObject: 'Plútó pályája (~5,9 Mrd km)' },
+      { n: 67, title: 'Csillagközi tér: Proxima Centauri felé', refSize: '1,56 fényév', category: 'Interstelláris', icon: '✨', color: 'text-cyan-300', border: 'border-cyan-400/60', desc: '147 trillió réteg (14,75 billió km). Már több mint másfél fényévnyi távolságot hidal át a papírköteg.', realObject: '1,56 fényév (Proxima Centauri 37%-a)' },
+      { n: 75, title: 'Fiastyúk (Plejádok) csillaghalmaz', refSize: '399,27 fényév', category: 'Galaktikus', icon: '🌟', color: 'text-purple-300', border: 'border-purple-400/70', desc: '37,78 trilliárd réteg! A fénysugárnak is majdnem 400 évébe telne végighaladni a 75-ször félbehajtott papír vastagságán!', realObject: 'Fiastyúk csillaghalmaz (~440 fényév)' },
+      { n: 83, title: 'A Tejútrendszer teljes átmérője', refSize: '102 213 fényév', category: 'Galaktikus', icon: '🌀', color: 'text-fuchsia-300', border: 'border-fuchsia-400/70', desc: '9,67 kvadrillió réteg. A papírunk vastagsága átéri a teljes Tejútrendszer galaxisunk korongját (~100 000 fényév)!', realObject: 'Tejútrendszer átmérője (100 000 fényév)' },
+      { n: 88, title: 'Túl az Androméda-galaxison', refSize: '3,27 millió fényév', category: 'Intergalaktikus', icon: '🌌', color: 'text-indigo-300', border: 'border-indigo-400/70', desc: '309 kvadrillió réteg. A papírtorony elér a szomszédos Androméda-galaxisig (2,5 millió fényév), sőt túl is halad rajta!', realObject: 'Androméda-galaxis (2,5 millió fényév)' },
+      { n: 93, title: 'Virgo Szuperhalmaz átmérője', refSize: '104,67 millió fényév', category: 'Kozmológiai', icon: '🔭', color: 'text-cyan-300', border: 'border-cyan-400/70', desc: '9,9 kvadrilliárd réteg. A papír vastagsága már galaxishalmazok ezreit magában foglaló szuperhalmaz méretű.', realObject: 'Virgo Szuperhalmaz (~110 millió fényév)' },
+      { n: 97, title: 'Laniakea Szuperhalmaz felett', refSize: '1,67 milliárd fényév', category: 'Kozmológiai', icon: '🕸️', color: 'text-amber-300', border: 'border-amber-400/70', desc: '158 kvadrilliárd réteg. Háromszor nagyobb a Laniakea szuperhalmaznál (520 millió fényév), amelyben a Tejútrendszer is lebeg.', realObject: 'Kozmikus galaxisfonalak (~1,5 Mrd fényév)' },
+      { n: 100, title: 'Túl a Megfigyelhető Univerzumon!', refSize: '13,40 milliárd fényév', category: 'Univerzális', icon: '♾️', color: 'text-rose-300', border: 'border-rose-400/80', desc: '1,26 kvintillió (1,26 × 10³⁰) réteg! 100 hajtással a papír vastagsága 13,4 milliárd fényév — majdnem egyidős az Ősrobbanás óta eltelt 13,8 milliárd évnyi fényúttal!', realObject: 'Az Ősrobbanás kora (~13,8 milliárd fényév)' }
+    ];
+
+    const formatThickness = (mm) => {
+      const LIGHT_YEAR_KM = 9.46073e12;
+      const AU_KM = 149597870.7;
+
+      let value, unit, subText;
+      const km = mm / 1e6;
+      const ly = km / LIGHT_YEAR_KM;
+
+      if (mm < 10) {
+        value = mm;
+        unit = 'mm';
+        subText = `${(mm * 1000).toLocaleString('hu-HU', { maximumFractionDigits: 0 })} mikrométer (µm)`;
+      } else if (mm < 1000) {
+        value = mm / 10;
+        unit = 'cm';
+        subText = `${mm.toLocaleString('hu-HU', { maximumFractionDigits: 2 })} mm`;
+      } else if (mm < 1e6) {
+        value = mm / 1000;
+        unit = 'méter';
+        subText = `${(mm / 10).toLocaleString('hu-HU', { maximumFractionDigits: 1 })} cm`;
+      } else if (km < 1e6) {
+        value = km;
+        unit = 'km';
+        subText = `${(mm / 1000).toLocaleString('hu-HU', { maximumFractionDigits: 0 })} méter`;
+      } else if (km < AU_KM * 0.5) {
+        value = km / 1e6;
+        unit = 'millió km';
+        subText = `${(km / 384400).toLocaleString('hu-HU', { maximumFractionDigits: 1 })}× Föld–Hold távolság`;
+      } else if (km < LIGHT_YEAR_KM * 0.1) {
+        value = km / 1e9;
+        unit = 'milliárd km';
+        const au = km / AU_KM;
+        subText = `${au.toLocaleString('hu-HU', { maximumFractionDigits: 2 })} Csillagászati Egység (CSE)`;
+      } else if (ly < 1e6) {
+        value = ly;
+        unit = 'fényév';
+        subText = `${(ly / 100000).toLocaleString('hu-HU', { maximumFractionDigits: 3 })}× Tejútrendszer átmérő`;
+      } else if (ly < 1e9) {
+        value = ly / 1e6;
+        unit = 'millió fényév';
+        subText = `${(ly / 2.5e6).toLocaleString('hu-HU', { maximumFractionDigits: 2 })}× Androméda-galaxis távolság`;
+      } else {
+        value = ly / 1e9;
+        unit = 'milliárd fényév';
+        subText = `A megfigyelhető Univerzum (93 Mrd fényév) ${((ly / 9.3e10) * 100).toLocaleString('hu-HU', { maximumFractionDigits: 2 })}%-a`;
+      }
+
+      const formattedValue = new Intl.NumberFormat('hu-HU', {
+        maximumFractionDigits: value < 10 ? 3 : 2,
+        minimumFractionDigits: 0
+      }).format(value);
+
+      const meters = mm / 1000;
+      const exp = Math.floor(Math.log10(meters));
+      const mantissa = (meters / Math.pow(10, exp)).toFixed(2).replace('.', ',');
+
+      return {
+        formattedValue,
+        unit,
+        subText,
+        rawMm: mm,
+        meters,
+        scientificMeters: `${mantissa} × 10^${exp} m`
+      };
+    };
+
+    const formatLengthMm = (mm) => {
+      if (mm <= 0) return '0 mm';
+      const LIGHT_YEAR_MM = 9.46073e18;
+      const km = mm / 1e6;
+
+      if (mm < 10) return `${mm.toLocaleString('hu-HU', { maximumFractionDigits: 2 })} mm`;
+      if (mm < 1000) return `${(mm / 10).toLocaleString('hu-HU', { maximumFractionDigits: 2 })} cm`;
+      if (mm < 1e6) return `${(mm / 1000).toLocaleString('hu-HU', { maximumFractionDigits: 2 })} m`;
+      if (km < 1e6) return `${km.toLocaleString('hu-HU', { maximumFractionDigits: 2 })} km`;
+      if (mm < LIGHT_YEAR_MM) {
+        const exp = Math.floor(Math.log10(km));
+        const mant = (km / Math.pow(10, exp)).toFixed(2).replace('.', ',');
+        return `${mant} × 10^${exp} km`;
+      }
+      const ly = mm / LIGHT_YEAR_MM;
+      if (ly < 1e6) return `${ly.toLocaleString('hu-HU', { maximumFractionDigits: 2 })} fényév`;
+      const expLy = Math.floor(Math.log10(ly));
+      const mantLy = (ly / Math.pow(10, expLy)).toFixed(2).replace('.', ',');
+      return `${mantLy} × 10^${expLy} fényév`;
+    };
+
+    const computeExactPowerOfTwoString = (n) => {
+      if (n === 0) return '1';
+      let digits = [1];
+      for (let i = 0; i < n; i++) {
+        let carry = 0;
+        for (let j = 0; j < digits.length; j++) {
+          const prod = digits[j] * 2 + carry;
+          digits[j] = prod % 10;
+          carry = Math.floor(prod / 10);
+        }
+        while (carry > 0) {
+          digits.push(carry % 10);
+          carry = Math.floor(carry / 10);
+        }
+      }
+      const rawStr = digits.reverse().join('');
+      return rawStr.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    };
+
+    const formatLayers = (folds) => {
+      const exactStr = computeExactPowerOfTwoString(folds);
+      if (folds <= 35) {
+        return { exact: exactStr, display: exactStr };
+      }
+      const exp = Math.floor(folds * Math.log10(2));
+      const mantissa = (Math.pow(10, folds * Math.log10(2) - exp)).toFixed(2).replace('.', ',');
+      return { exact: exactStr, display: `${mantissa} × 10^${exp}` };
+    };
+
+    // 2^n - 1 pontos szöveges kiszámítása a sakktábla összesített búzaszemeihez
+    const computeExactPowerOfTwoMinusOneString = (n) => {
+      if (n <= 0) return '0';
+      let digits = [1];
+      for (let i = 0; i < n; i++) {
+        let carry = 0;
+        for (let j = 0; j < digits.length; j++) {
+          const prod = digits[j] * 2 + carry;
+          digits[j] = prod % 10;
+          carry = Math.floor(prod / 10);
+        }
+        while (carry > 0) {
+          digits.push(carry % 10);
+          carry = Math.floor(carry / 10);
+        }
+      }
+      digits[0] -= 1;
+      const rawStr = digits.reverse().join('');
+      return rawStr.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    };
+
+    // Búzaszemek súlyának formázása (1 szem = 40 mg)
+    const formatWheatMass = (grainsCountFloat) => {
+      const grams = grainsCountFloat * 0.04; // 40 mg = 0.04 g
+      const kg = grams / 1000;
+      const tons = kg / 1000;
+
+      if (grams < 1) {
+        return `${(grams * 1000).toLocaleString('hu-HU', { maximumFractionDigits: 0 })} mg`;
+      }
+      if (grams < 1000) {
+        return `${grams.toLocaleString('hu-HU', { maximumFractionDigits: 2 })} gramm`;
+      }
+      if (kg < 1000) {
+        return `${kg.toLocaleString('hu-HU', { maximumFractionDigits: 2 })} kg`;
+      }
+      if (tons < 1e6) {
+        return `${tons.toLocaleString('hu-HU', { maximumFractionDigits: 2 })} tonna`;
+      }
+      if (tons < 1e9) {
+        return `${(tons / 1e6).toLocaleString('hu-HU', { maximumFractionDigits: 2 })} millió tonna`;
+      }
+      return `${(tons / 1e9).toLocaleString('hu-HU', { maximumFractionDigits: 2 })} milliárd tonna`;
+    };
+
+    const App = () => {
+      const [folds, setFolds] = useState(7);
+      const [presetId, setPresetId] = useState('a4');
+      const [t0, setT0] = useState(0.1);
+      const [L0, setL0] = useState(297);
+      const [autoPlay, setAutoPlay] = useState(false);
+      const [chessSquare, setChessSquare] = useState(64);
+      const [foldAnimKey, setFoldAnimKey] = useState(0);
+      const [wheatDrops, setWheatDrops] = useState([]);
+      const starCanvasRef = useRef(null);
+
+      // Dinamikus 3D csillagmező háttér-animáció (a sebesség a hajtások számával nő!)
+      useEffect(() => {
+        const canvas = starCanvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let animationFrameId;
+
+        const resize = () => {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        };
+        resize();
+        window.addEventListener('resize', resize);
+
+        const stars = Array.from({ length: 85 }, () => ({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 1.8 + 0.4,
+          speed: Math.random() * 0.4 + 0.15,
+          alpha: Math.random() * 0.6 + 0.2
+        }));
+
+        const render = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          // A hajtások számával gyorsuló kozmikus utazás érzet
+          const speedBoost = 1 + Math.pow(folds / 35, 2.2);
+
+          stars.forEach((s) => {
+            s.y -= s.speed * speedBoost;
+            if (s.y < 0) {
+              s.y = canvas.height;
+              s.x = Math.random() * canvas.width;
+            }
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(186, 230, 253, ${s.alpha})`;
+            if (speedBoost > 3.5) {
+              // Fénysebesség-csíkok magas hajtásszámnál
+              ctx.rect(s.x, s.y, s.size * 0.8, Math.min(28, s.speed * speedBoost * 2.5));
+            } else {
+              ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            }
+            ctx.fill();
+          });
+
+          animationFrameId = requestAnimationFrame(render);
+        };
+        render();
+
+        return () => {
+          cancelAnimationFrame(animationFrameId);
+          window.removeEventListener('resize', resize);
+        };
+      }, [folds]);
+
+      const handleSelectPreset = (preset) => {
+        setPresetId(preset.id);
+        setT0(preset.t0);
+        setL0(preset.L0);
+      };
+
+      const triggerAnimatedFold = useCallback((targetFolds) => {
+        const nextFolds = typeof targetFolds === 'number' ? targetFolds : Math.min(100, folds + 1);
+        setFolds(nextFolds);
+        setFoldAnimKey((k) => k + 1);
+      }, [folds]);
+
+      // Sakktábla mezőre kattintáskor arany búzaszem hullás indítása
+      const handleChessClick = (sq) => {
+        setChessSquare(sq);
+        const batchId = Date.now();
+        const count = Math.min(12, Math.max(3, Math.ceil(sq / 6)));
+        const newDrops = Array.from({ length: count }, (_, i) => ({
+          id: `${batchId}-${i}`,
+          left: 15 + Math.random() * 70,
+          delay: i * 0.04
+        }));
+        setWheatDrops(newDrops);
+      };
+
+      useEffect(() => {
+        if (!autoPlay) return;
+        const timer = setInterval(() => {
+          setFolds((prev) => {
+            if (prev >= 100) {
+              setAutoPlay(false);
+              return 100;
+            }
+            return prev + 1;
+          });
+        }, 850);
+        return () => clearInterval(timer);
+      }, [autoPlay]);
+
+      const mathData = useMemo(() => {
+        const rawMm = t0 * Math.pow(2, folds);
+        const thickness = formatThickness(rawMm);
+        const layers = formatLayers(folds);
+
+        const twoPowN = Math.pow(2, folds);
+        const gallivan1DMm = folds === 0 ? 0 : ((Math.PI * t0) / 6) * (twoPowN + 4) * (twoPowN - 1);
+        const gallivan2DMm = folds === 0 ? 0 : Math.PI * t0 * Math.pow(2, 1.5 * (folds - 1));
+
+        const isPossible1D = L0 >= gallivan1DMm;
+        let maxPossibleFoldsForPaper = 0;
+        for (let k = 1; k <= 30; k++) {
+          const req = ((Math.PI * t0) / 6) * (Math.pow(2, k) + 4) * (Math.pow(2, k) - 1);
+          if (L0 >= req) maxPossibleFoldsForPaper = k;
+          else break;
+        }
+
+        const stiffnessExp = Math.floor(folds * Math.log10(8));
+        const stiffnessMant = Math.pow(10, folds * Math.log10(8) - stiffnessExp).toFixed(2).replace('.', ',');
+
+        return {
+          thickness,
+          layers,
+          gallivan1DMm,
+          gallivan1DFormatted: formatLengthMm(gallivan1DMm),
+          gallivan2DFormatted: formatLengthMm(gallivan2DMm),
+          isPossible1D,
+          maxPossibleFoldsForPaper,
+          stiffnessStr: folds <= 6 ? Math.pow(8, folds).toLocaleString('hu-HU') : `${stiffnessMant} × 10^${stiffnessExp}`
+        };
+      }, [folds, t0, L0]);
+
+      const currentMilestone = useMemo(() => {
+        return [...MILESTONES].reverse().find((m) => folds >= m.n) || MILESTONES[0];
+      }, [folds]);
+
+      const nextMilestone = useMemo(() => {
+        return MILESTONES.find((m) => folds < m.n) || null;
+      }, [folds]);
+
+      // Sakktábla (1..64 mező) számítások
+      const chessData = useMemo(() => {
+        const k = chessSquare;
+        const grainsOnSquareExact = computeExactPowerOfTwoString(k - 1);
+        const cumulativeGrainsExact = computeExactPowerOfTwoMinusOneString(k);
+        const grainsOnSquareFloat = Math.pow(2, k - 1);
+        const cumulativeGrainsFloat = Math.pow(2, k) - 1;
+
+        const cumulativeTons = (cumulativeGrainsFloat * 0.04) / 1e6;
+        const GLOBAL_ANNUAL_WHEAT_TONS = 700e6; // 700 millió tonna / év
+      const yearsOfGlobalHarvest = cumulativeTons / GLOBAL_ANNUAL_WHEAT_TONS;
+
+      // Búzakúp fizikai geometria (1 szem térfogata ~ 0.05 cm³ = 5e-8 m³, rézsűszög ~ 28°)
+      const pileVolumeM3 = grainsOnSquareFloat * 5e-8;
+      // Kúp térfogat V = (1/3) * pi * r^2 * h, ahol h = r * tan(28°) ≈ 0.5317 * r => r = (3*V / (pi*0.5317))^(1/3)
+      const coneRadiusM = Math.pow((3 * pileVolumeM3) / (Math.PI * 0.5317), 1 / 3);
+      const coneHeightM = coneRadiusM * 0.5317;
+
+      const formatConeDim = (m) => {
+        if (m < 0.01) return `${(m * 1000).toLocaleString('hu-HU', { maximumFractionDigits: 1 })} mm`;
+        if (m < 1) return `${(m * 100).toLocaleString('hu-HU', { maximumFractionDigits: 1 })} cm`;
+        if (m < 1000) return `${m.toLocaleString('hu-HU', { maximumFractionDigits: 2 })} m`;
+        return `${(m / 1000).toLocaleString('hu-HU', { maximumFractionDigits: 2 })} km`;
+      };
+
+      let visualStageDesc = '';
+      if (k <= 4) {
+        visualStageDesc = 'Néhány különálló szem a mező közepén (1, 2, 4, 8 szem) – könnyedén megszámolható.';
+      } else if (k <= 8) {
+        visualStageDesc = 'Szabályos sorokba rendezett búzaszemek (16–128 szem), amelyek kezdik teljesen betakarni a mezőt.';
+      } else if (k <= 12) {
+        visualStageDesc = 'Meredek búzakúpok és piramisok emelkednek a táblán (256–2048 szem), túlnőve a sakkfigurák magasságán!';
+      } else if (k <= 20) {
+        visualStageDesc = 'A búzakúp lezúdul a sakktábláról és betemeti a szobát (több mázsa / tonna búza).';
+      } else if (k <= 40) {
+        visualStageDesc = 'Hatalmas arany búzahegy, amely felhőkarcolókat és hegycsúcsokat temet maga alá.';
+      } else {
+        visualStageDesc = 'Bolygóléptékű búzaóceán: a kúp csúcsa már a világűrbe (több száz kilométer magasra) nyúlik!';
+      }
+
+      return {
+        k,
+        grainsOnSquareExact,
+        cumulativeGrainsExact,
+        squareMassStr: formatWheatMass(grainsOnSquareFloat),
+        cumulativeMassStr: formatWheatMass(cumulativeGrainsFloat),
+        yearsOfGlobalHarvest,
+        coneHeightStr: formatConeDim(coneHeightM),
+        coneDiameterStr: formatConeDim(coneRadiusM * 2),
+        visualStageDesc,
+        harvestStr:
+          yearsOfGlobalHarvest < 0.0001
+            ? 'Elhanyagolható töredék (< 0,01 mp a világtermésből)'
+            : yearsOfGlobalHarvest < 1
+            ? `A Föld éves termésének ${(yearsOfGlobalHarvest * 100).toLocaleString('hu-HU', { maximumFractionDigits: 2 })}%-a`
+            : `${yearsOfGlobalHarvest.toLocaleString('hu-HU', { maximumFractionDigits: 1 })} évnyi teljes földi búzatermés!`
+      };
+    }, [chessSquare]);
+
+    return (
+      <div className="min-h-screen bg-[#030712] text-slate-100 pb-14 relative">
+          {/* Interaktív csillagmező háttér */}
+          <canvas ref={starCanvasRef} className="fixed inset-0 pointer-events-none z-0 opacity-75" />
+
+          <div
+            className="fixed inset-0 pointer-events-none z-0"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle at 20% 25%, rgba(6, 182, 212, 0.13) 0%, transparent 45%), radial-gradient(circle at 80% 75%, rgba(168, 85, 247, 0.13) 0%, transparent 50%)'
+            }}
+          />
+
+          {/* Lebegő Origami Hajtás Visszajelző (minden új hajtásnál villan egyet) */}
+          {foldAnimKey > 0 && (
+            <div
+              key={foldAnimKey}
+              className="fixed bottom-6 right-6 z-50 pointer-events-none animate-origami-fold flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-cyan-400/60 shadow-[0_0_25px_rgba(34,211,238,0.45)]"
+            >
+              <div className="w-6 h-6 rounded bg-gradient-to-tr from-cyan-400 to-purple-500 shadow-inner" />
+              <span className="font-mono text-xs font-bold text-cyan-300">
+                2^{folds} réteg!
+              </span>
+            </div>
+          )}
+
+          {/* FEJLÉC */}
+          <header className="relative z-10 pt-6 pb-5 px-4 sm:px-6 max-w-7xl mx-auto border-b border-slate-800/80">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono uppercase tracking-wider mb-2.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Mobilra Optimalizált Tudományos Szimulátor (0–100)
+                </div>
+                <h1 className="font-fraunces text-3xl sm:text-5xl font-black tracking-tight leading-tight title-gradient-cosmic">
+                  Hányszor lehet félbehajtani egy papírt?
+                </h1>
+              </div>
+
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 w-full lg:w-auto lg:min-w-[330px]">
+                <label className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-cyan-400 mb-2">
+                  <Sliders className="w-3.5 h-3.5" />
+                  Kísérleti Papír Kiválasztása (t₀, L₀)
+                </label>
+                <select
+                  value={presetId}
+                  onChange={(e) => {
+                    const found = PAPER_PRESETS.find((p) => p.id === e.target.value);
+                    if (found) handleSelectPreset(found);
+                  }}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white font-medium focus:outline-none focus:border-cyan-400"
+                >
+                  {PAPER_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center justify-between text-xs text-slate-400 mt-2 font-mono">
+                  <span>t₀ = {t0} mm</span>
+                  <span>Hossz L₀ = {formatLengthMm(L0)}</span>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+            {/* 1. ÉLŐ MATEMATIKAI MOTOR */}
+            <section className="rounded-3xl bg-slate-900/75 border border-cyan-500/30 p-4 sm:p-7 shadow-[0_0_50px_rgba(6,182,212,0.1)]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-5 border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0">
+                    <Calculator className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="font-fraunces text-xl sm:text-2xl font-bold flex flex-wrap items-center gap-2">
+                      <span className="title-gradient-cosmic">Élő Matematikai Képletmotor</span>
+                      <span className="px-2.5 py-0.5 text-xs font-mono rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                        n = {folds}
+                      </span>
+                    </h2>
+                  </div>
+                </div>
+
+                <div
+                  className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border text-xs sm:text-sm font-medium ${
+                    mathData.isPossible1D
+                      ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
+                      : 'bg-rose-950/50 border-rose-500/40 text-rose-300'
+                  }`}
+                >
+                  {mathData.isPossible1D ? (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                      <div>
+                        <div className="font-bold">Fizikailag végrehajtható!</div>
+                        <div className="text-xs opacity-80">
+                          A választott papírhossz ({formatLengthMm(L0)}) elegendő a(z) {folds}. hajtáshoz.
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+                      <div>
+                        <div className="font-bold">Elméleti tartomány (Fizikai korlát felett)</div>
+                        <div className="text-xs opacity-80">
+                          Max. {mathData.maxPossibleFoldsForPaper} hajtás lehetséges ({folds} hajtáshoz {mathData.gallivan1DFormatted} kellene).
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Csúszka és nagy érintőgombok mobilon */}
+              <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 sm:p-5 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                  <div className="flex items-baseline justify-between sm:justify-start gap-3">
+                    <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
+                      Hajtogatások száma (n):
+                    </span>
+                    <span className="text-3xl sm:text-4xl font-black font-mono text-cyan-400">
+                      {folds} <span className="text-base font-normal text-slate-500">/ 100</span>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setAutoPlay(false);
+                        setFolds(0);
+                      }}
+                      className="px-3 py-2.5 rounded-xl bg-slate-900 active:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-300 flex items-center justify-center gap-1"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Reset
+                    </button>
+                    <button
+                      onClick={() => setFolds((f) => Math.max(0, f - 1))}
+                      disabled={folds <= 0}
+                      className="px-3 py-2.5 rounded-xl bg-slate-900 active:bg-slate-800 disabled:opacity-40 border border-slate-700 text-sm font-bold text-white flex items-center justify-center gap-1"
+                    >
+                      <ChevronLeft className="w-4 h-4" /> -1
+                    </button>
+                    <button
+                      onClick={() => triggerAnimatedFold(Math.min(100, folds + 1))}
+                      disabled={folds >= 100}
+                      className="px-3 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 active:scale-95 disabled:opacity-40 text-sm font-bold text-slate-950 flex items-center justify-center gap-1"
+                    >
+                      +1 <ChevronRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => triggerAnimatedFold(Math.min(100, folds + 5))}
+                      disabled={folds >= 100}
+                      className="px-3 py-2.5 rounded-xl bg-slate-900 active:bg-slate-800 disabled:opacity-40 border border-slate-700 text-xs font-mono font-bold text-cyan-300"
+                    >
+                      +5
+                    </button>
+                    <button
+                      onClick={() => triggerAnimatedFold(Math.min(100, folds + 10))}
+                      disabled={folds >= 100}
+                      className="px-3 py-2.5 rounded-xl bg-slate-900 active:bg-slate-800 disabled:opacity-40 border border-slate-700 text-xs font-mono font-bold text-purple-300"
+                    >
+                      +10
+                    </button>
+                    <button
+                      onClick={() => setAutoPlay((a) => !a)}
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 ${
+                        autoPlay
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                          : 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                      }`}
+                    >
+                      {autoPlay ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      {autoPlay ? 'Szünet' : 'Auto'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="py-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={folds}
+                    onChange={(e) => {
+                      setAutoPlay(false);
+                      setFolds(Number(e.target.value));
+                    }}
+                    className="w-full cursor-pointer"
+                  />
+                </div>
+
+                {/* Vízszintesen görgethető gyorsugró sáv mobilon */}
+                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-slate-800/80 overflow-x-auto pb-1">
+                  <span className="text-[11px] font-mono text-slate-400 shrink-0 mr-1">Ugrás:</span>
+                  {MILESTONES.map((m) => (
+                    <button
+                      key={m.n}
+                      onClick={() => {
+                        setAutoPlay(false);
+                        triggerAnimatedFold(m.n);
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-mono shrink-0 transition-all ${
+                        folds === m.n
+                          ? 'bg-cyan-500 text-slate-950 font-bold'
+                          : 'bg-slate-900 text-slate-300 border border-slate-800'
+                      }`}
+                    >
+                      {m.n} {m.icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4 Matematikai Kártya */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-950/90 border border-cyan-500/30 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono text-cyan-400 mb-2">
+                      <span>1. VASTAGSÁG</span>
+                      <span className="px-2 py-0.5 rounded bg-cyan-500/10">Mértani sor</span>
+                    </div>
+                    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 font-mono text-sm text-center text-white mb-2">
+                      T(n) = t₀ · 2<sup className="text-cyan-400">n</sup>
+                    </div>
+                    <div className="text-xs font-mono text-slate-200 bg-slate-900/50 p-2 rounded-lg border border-slate-800/80">
+                      T({folds}) = {t0} mm × 2<sup className="text-cyan-400">{folds}</sup>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-slate-800/80">
+                    <div className="text-2xl font-black text-cyan-300">
+                      = {mathData.thickness.formattedValue} {mathData.thickness.unit}
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                      Normálalak: {mathData.thickness.scientificMeters}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-950/90 border border-blue-500/30 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono text-blue-400 mb-2">
+                      <span>2. RÉTEGEK SZÁMA</span>
+                      <span className="px-2 py-0.5 rounded bg-blue-500/10">Duplázódás</span>
+                    </div>
+                    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 font-mono text-sm text-center text-white mb-2">
+                      N(n) = 2<sup className="text-blue-400">n</sup>
+                    </div>
+                    <div className="text-xs font-mono text-slate-200 bg-slate-900/50 p-2 rounded-lg border border-slate-800/80">
+                      N({folds}) = 2<sup className="text-blue-400">{folds}</sup> réteg
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-slate-800/80">
+                    <div className="text-xl font-black text-blue-300 font-mono truncate">
+                      = {mathData.layers.display} db
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                      Felület: A₀ / 2^{folds}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono text-purple-400 mb-2">
+                      <span>3. GALLIVAN-HOSSZKORLÁT</span>
+                      <span className="px-2 py-0.5 rounded bg-purple-500/10">2001</span>
+                    </div>
+                    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 font-mono text-xs text-center text-white mb-2">
+                      L<sub>min</sub> = (π·t₀ / 6)·(2<sup className="text-purple-400">n</sup> + 4)(2<sup className="text-purple-400">n</sup> - 1)
+                    </div>
+                    <div className="text-xs font-mono text-slate-200 bg-slate-900/50 p-2 rounded-lg border border-slate-800/80">
+                      Min. papírhossz {folds} hajtáshoz:
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-slate-800/80">
+                    <div className="text-xl font-black text-purple-300 font-mono">
+                      = {mathData.gallivan1DFormatted}
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                      2D váltott irányban: {mathData.gallivan2DFormatted}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-950/90 border border-amber-500/30 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono text-amber-400 mb-2">
+                      <span>4. HAJLÍTÁSI MEREVSÉG</span>
+                      <span className="px-2 py-0.5 rounded bg-amber-500/10">I ∝ T³</span>
+                    </div>
+                    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 font-mono text-xs text-center text-white mb-2">
+                      I(n) ∝ (2<sup className="text-amber-400">n</sup>)³ = 8<sup className="text-amber-400">n</sup>
+                    </div>
+                    <div className="text-xs text-slate-300 bg-slate-900/50 p-2 rounded-lg border border-slate-800/80">
+                      Minden hajtás <strong>8-szorosára</strong> növeli a keresztmetszeti ellenállást!
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-slate-800/80">
+                    <div className="text-xl font-black text-amber-300 font-mono">
+                      {mathData.stiffnessStr}× merevebb
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                      az 1 db papírlaphoz képest
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* 2. MÉRFÖLDKÖVEK ÉS LÉPTÉKTÁBLÁZAT */}
+            <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-6 flex flex-col">
+                <div className={`p-5 sm:p-8 rounded-3xl bg-slate-900/80 border ${currentMilestone.border} relative overflow-hidden flex-1 flex flex-col justify-between`}>
+                  <div>
+                    <div className="absolute -right-2 -top-2 text-7xl sm:text-8xl opacity-20 select-none pointer-events-none animate-float">
+                      {currentMilestone.icon}
+                    </div>
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-950 border border-slate-800 text-xs font-mono text-cyan-400 mb-3">
+                      <span>ELÉRT LÉPTÉK ({currentMilestone.n}. HAJTÁS)</span>
+                      <span>•</span>
+                      <span>{currentMilestone.category}</span>
+                    </div>
+                    <h3 className={`font-fraunces text-2xl sm:text-4xl font-black mb-3 ${currentMilestone.color}`}>
+                      {currentMilestone.title}
+                    </h3>
+                    <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+                      {currentMilestone.desc}
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-slate-950/90 border border-slate-800/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[11px] font-mono text-slate-400 uppercase">Összehasonlítási alap</div>
+                        <div className="text-sm sm:text-base font-bold text-white">{currentMilestone.realObject}</div>
+                      </div>
+                      <div className="sm:text-right">
+                        <div className="text-[11px] font-mono text-slate-400 uppercase">Papír vastagsága most</div>
+                        <div className="text-base sm:text-lg font-black text-cyan-400 font-mono">
+                          {mathData.thickness.formattedValue} {mathData.thickness.unit}
+                        </div>
+                      </div>
+                    </div>
+
+                    {nextMilestone && (
+                      <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                        <span>
+                          Következő: <strong className="text-slate-200">{nextMilestone.title}</strong> ({nextMilestone.n}.)
+                        </span>
+                        <button
+                          onClick={() => triggerAnimatedFold(nextMilestone.n)}
+                          className="text-cyan-400 font-mono font-bold underline py-1 px-2"
+                        >
+                          Ugrás (+{nextMilestone.n - folds}) →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-6 flex flex-col">
+                <div className="rounded-3xl bg-slate-900/70 border border-slate-800 p-4 sm:p-6 flex-1 flex flex-col">
+                  <h4 className="text-xs sm:text-sm font-mono uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                    <span>Teljes Léptéktáblázat (0 → 100)</span>
+                    <span className="text-cyan-400">Bökj bármelyikre!</span>
+                  </h4>
+                  <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                    {MILESTONES.map((m) => {
+                      const isActive = folds === m.n;
+                      const isPassed = folds > m.n;
+                      return (
+                        <button
+                          key={m.n}
+                          onClick={() => triggerAnimatedFold(m.n)}
+                          className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between ${
+                            isActive
+                              ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-md'
+                              : isPassed
+                              ? 'bg-slate-950/60 border-slate-800/80 text-slate-300'
+                              : 'bg-slate-950/30 border-slate-900 text-slate-500'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="text-lg shrink-0">{m.icon}</span>
+                            <div className="truncate">
+                              <div className="text-xs font-bold truncate">
+                                {m.n}. hajtás — {m.title}
+                              </div>
+                              <div className="text-[11px] text-slate-400 truncate">{m.realObject}</div>
+                            </div>
+                          </div>
+                          <span className="text-xs font-mono font-bold text-cyan-400 shrink-0 ml-2">
+                            {m.refSize}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* 3. MYTHBUSTERS ÉS REKORDOK */}
+            <section className="space-y-6">
+              <div className="rounded-3xl bg-gradient-to-br from-amber-950/40 via-slate-900/90 to-slate-950 border border-amber-500/40 p-5 sm:p-8 shadow-xl">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                  <div className="lg:col-span-8 space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold">
+                      <Flame className="w-4 h-4" />
+                      MYTHBUSTERS (ÁLLÍTÓLAG) KÍSÉRLET
+                    </div>
+                    <h3 className="font-fraunces text-2xl sm:text-3xl font-black title-gradient-amber">
+                      Focipálya méretű papír, emberi erő és az úthenger
+                    </h3>
+                    <blockquote className="p-4 rounded-2xl bg-slate-950/90 border-l-4 border-amber-400 text-slate-200 text-sm sm:text-base leading-relaxed italic">
+                      „Már a <strong>Mythbusters (Állítólag)</strong> című sorozat is foglalkozott a kérdéssel egy néhány évvel ezelőtti részében, ahol a készítők arra jutottak, hogy egy kellően nagy darab papírt, az ő esetükben egy <strong>focipálya méretűt emberi erővel félbe tudnak hajtani nyolcszor</strong>. Amikor pedig egy <strong>úthengerrel is besegítettek, akkor 11-szer</strong> sikerült félbehajtaniuk a papírt.”
+                    </blockquote>
+                  </div>
+
+                  <div className="lg:col-span-4 bg-slate-950/90 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+                    <button
+                      onClick={() => {
+                        handleSelectPreset(PAPER_PRESETS[2]);
+                        triggerAnimatedFold(8);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full py-3 px-3 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-300 text-xs font-bold"
+                    >
+                      Szimuláció: 8. hajtás (Emberi erő) →
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleSelectPreset(PAPER_PRESETS[2]);
+                        triggerAnimatedFold(11);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full py-3 px-3 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold"
+                    >
+                      Szimuláció: 11. hajtás (Úthengerrel) →
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="rounded-3xl bg-slate-900/70 border border-emerald-500/30 p-5 flex flex-col justify-between">
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-400 mb-2">
+                      <Award className="w-4 h-4" />
+                      2002 • BRITNEY GALLIVAN
+                    </div>
+                    <h4 className="text-lg font-bold text-white mb-2">
+                      12 hajtás egy 1200 méteres tekercsből
+                    </h4>
+                    <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">
+                      Britney Gallivan középiskolásként vezette le a pontos geometriai egyenletet, majd egy 1200 méteres papírtekercset 12-szer hajtott félbe.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSelectPreset(PAPER_PRESETS[3]);
+                      triggerAnimatedFold(12);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold"
+                  >
+                    Gallivan 12. hajtása →
+                  </button>
+                </div>
+
+                <div className="rounded-3xl bg-slate-900/70 border border-cyan-500/30 p-5 flex flex-col justify-between">
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-mono text-cyan-400 mb-2">
+                      <BookOpen className="w-4 h-4" />
+                      2011 • MIT VILÁGREKORD
+                    </div>
+                    <h4 className="text-lg font-bold text-white mb-2">
+                      13 hajtás (8192 réteg) 16 km papírral
+                    </h4>
+                    <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">
+                      Az MIT és a St. Mark’s diákjai 16 kilométernyi ipari tekercset fektettek le, és elérték a 13. félbehajtást.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSelectPreset(PAPER_PRESETS[4]);
+                      triggerAnimatedFold(13);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold"
+                  >
+                    MIT 13. hajtása →
+                  </button>
+                </div>
+
+                <div className="rounded-3xl bg-slate-900/70 border border-rose-500/30 p-5 flex flex-col justify-between">
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-mono text-rose-400 mb-2">
+                      <Activity className="w-4 h-4" />
+                      2016 • HIDRAULIKUS PRÉS
+                    </div>
+                    <h4 className="text-lg font-bold text-white mb-2">
+                      Miért robban szét az A4-es lap a 7. hajtásnál?
+                    </h4>
+                    <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">
+                      100 tonnás hidraulikus prés alatt a kalcium-karbonát töltőanyag és a cellulózrostok rideg anyagként törnek szét.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSelectPreset(PAPER_PRESETS[0]);
+                      triggerAnimatedFold(7);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold"
+                  >
+                    7. hajtás betöltése →
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* 4. A SAKKTÁBLA ÉS A BÚZASZEMEK LEGENDÁJA (INTERAKTÍV SZEKCIÓ) */}
+            <section className="rounded-3xl bg-gradient-to-br from-yellow-950/40 via-slate-900/95 to-emerald-950/30 border border-yellow-500/40 p-5 sm:p-8 shadow-[0_0_60px_rgba(234,179,8,0.1)] space-y-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-yellow-500/20 pb-5">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/15 border border-yellow-500/40 text-yellow-300 text-xs font-mono font-bold uppercase tracking-wider mb-2.5">
+                    <span>♟️</span>
+                    <span>Az Exponenciális Növekedés Ősi Legendája • 2ⁿ a Sakktáblán</span>
+                  </div>
+                  <h2 className="font-fraunces text-2xl sm:text-4xl font-black title-gradient-gold">
+                    A sakktábla és a búzaszemek története
+                  </h2>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      handleChessClick(64);
+                      triggerAnimatedFold(64);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-xs font-black transition-all shadow-lg shadow-yellow-500/20"
+                  >
+                    Ugrás a 64. papírhajtásra (2⁶⁴) →
+                  </button>
+                </div>
+              </div>
+
+              {/* A történet és a 100 évnyi búzatermés kiemelése */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/85 border border-yellow-500/30 space-y-3 text-slate-200 text-sm sm:text-base leading-relaxed">
+                    <p>
+                      A sakk nagyjából kétezer évvel ezelőtt Indiából indult el hódító útjára. Egy népszerű legenda szerint{' '}
+                      <strong className="text-yellow-300">Shehram hindu király</strong> bölcs tanácsadója,{' '}
+                      <strong className="text-yellow-300">Sessa ebn Daher</strong> találta ki ura unalmának elűzésére. A tudós mindössze annyit kért jutalmul az uralkodótól, hogy a sakktábla első négyzetére tegyenek <strong>egy szem búzát</strong>, a másodikra annak kétszeresét, azaz <strong>kettő szemet</strong>, a harmadikra szintén az előző kétszeresét, s így tovább.
+                    </p>
+                    <p>
+                      A király örömmel teljesítette volna a szerény kérést, ám kiderült, hogy a világon nincs annyi búzaszem összesen, amennyi a hatvannégy kockára jutott volna: több mint <strong className="text-amber-300">18 trillió</strong> – egészen pontosan{' '}
+                      <span className="font-mono font-bold text-yellow-300 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/30">
+                        18 446 744 073 709 551 615
+                      </span>{' '}
+                      – búzaszemet kellett volna elhelyezni a táblán…
+                    </p>
+                  </div>
+
+                  <div className="p-4 sm:p-5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 space-y-2">
+                    <div className="flex items-center gap-2 text-emerald-300 font-black text-base sm:text-lg">
+                      <span>🌾</span>
+                      <span>Száz év alatt terem ennyi búza</span>
+                    </div>
+                    <p className="text-slate-200 text-sm sm:text-base leading-relaxed">
+                      Ha egy búzaszem átlagos súlya <strong className="text-emerald-300">40 milligramm</strong>, akkor a bölcs férfiú által kért mennyiség több mint{' '}
+                      <strong className="text-emerald-300">700 milliárd tonna</strong> (egészen pontosan ~737,87 milliárd tonna) búza lenne. Ha figyelembe vesszük, hogy manapság a Földön összesen mintegy{' '}
+                      <strong className="text-white">700 millió tonna búza</strong> terem évente, akkor a jelenlegi termelési technológia mellett{' '}
+                      <strong className="text-yellow-300 underline decoration-yellow-500/60">száz év (sőt, több mint ezer év!)</strong> szükségeltetne ennyi búzaszem előállításához…
+                    </p>
+                  </div>
+
+                  {/* Matematikai összefüggés doboz */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-3.5 rounded-2xl bg-slate-950/90 border border-slate-800">
+                      <div className="text-[11px] font-mono text-yellow-400 uppercase">Mező képlete (k. kocka)</div>
+                      <div className="text-base font-mono font-black text-white mt-1">
+                        B(k) = 2<sup className="text-yellow-400">k-1</sup> szem
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">Ugyanaz, mint k-1 papírhajtás!</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-slate-950/90 border border-slate-800">
+                      <div className="text-[11px] font-mono text-amber-400 uppercase">Összesen 64 mezőn</div>
+                      <div className="text-base font-mono font-black text-white mt-1">
+                        S₆₄ = 2<sup className="text-amber-400">64</sup> - 1
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">18,44 trillió szem búza</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-slate-950/90 border border-slate-800">
+                      <div className="text-[11px] font-mono text-emerald-400 uppercase">Papír 64 hajtásnál</div>
+                      <div className="text-base font-mono font-black text-emerald-300 mt-1">
+                        1,84 billió km
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">~0,195 fényév vastag!</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interaktív 8x8-as Sakktábla Szimulátor */}
+                <div className="lg:col-span-5 bg-slate-950/90 border border-yellow-500/30 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 relative overflow-hidden">
+                  {/* Arany búzaszem hullás részecskék */}
+                  {wheatDrops.map((drop) => (
+                    <span
+                      key={drop.id}
+                      style={{ left: `${drop.left}%`, animationDelay: `${drop.delay}s` }}
+                      className="absolute top-6 text-base pointer-events-none select-none z-20 animate-wheat-drop"
+                    >
+                      🌾
+                    </span>
+                  ))}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-mono uppercase tracking-wider text-yellow-400 font-bold">
+                        Interaktív Sakktábla (1–64. mező)
+                      </span>
+                      <span className="text-xs font-mono text-slate-400">Bökj egy mezőre!</span>
+                    </div>
+
+                    {/* 8x8 Sakktábla Rács */}
+                    <div className="grid grid-cols-8 gap-1 p-2 rounded-xl bg-slate-900 border border-slate-800 aspect-square max-w-[330px] mx-auto">
+                      {Array.from({ length: 64 }, (_, idx) => {
+                        const sq = idx + 1;
+                        const row = Math.floor(idx / 8);
+                        const col = idx % 8;
+                        const isDark = (row + col) % 2 === 1;
+                        const isSelected = chessSquare === sq;
+                        return (
+                          <button
+                            key={sq}
+                            onClick={() => handleChessClick(sq)}
+                            className={`rounded-md flex flex-col items-center justify-center text-[10px] sm:text-xs font-mono transition-all ${
+                              isSelected
+                                ? 'bg-yellow-400 text-slate-950 font-black ring-2 ring-white scale-105 z-10 shadow-lg'
+                                : isDark
+                                ? 'bg-slate-800/90 text-slate-300 hover:bg-slate-700'
+                                : 'bg-slate-950/90 text-slate-400 hover:bg-slate-800'
+                            }`}
+                          >
+                            <span>{sq}</span>
+                            {sq === 1 && <span className="text-[8px]">🌾1</span>}
+                            {sq === 64 && <span className="text-[8px]">👑</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Gyorsválasztó mező gombok */}
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
+                      {[1, 2, 8, 16, 24, 32, 48, 64].map((sq) => (
+                        <button
+                          key={sq}
+                          onClick={() => handleChessClick(sq)}
+                          className={`px-2 py-1 rounded-lg text-[11px] font-mono ${
+                            chessSquare === sq
+                              ? 'bg-yellow-400 text-slate-950 font-bold'
+                              : 'bg-slate-900 text-slate-300 border border-slate-800'
+                          }`}
+                        >
+                          {sq}. mező
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Kiválasztott mező élő adatai */}
+                  <div className="p-3.5 rounded-xl bg-slate-900/90 border border-yellow-500/30 space-y-2">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                      <span className="text-xs font-mono text-yellow-300 font-bold">
+                        Kiválasztva: {chessData.k}. mező (2^{chessData.k - 1})
+                      </span>
+                      <span className="text-[11px] font-mono text-slate-400">
+                        1–{chessData.k}. mező összesen:
+                      </span>
+                    </div>
+
+                    <div>
+                      <div className="text-[11px] text-slate-400 font-mono">Búzaszemek száma ezen az 1 mezőn:</div>
+                      <div className="text-xs sm:text-sm font-mono font-bold text-white break-all">
+                        {chessData.grainsOnSquareExact} szem ({chessData.squareMassStr})
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[11px] text-yellow-300/90 font-mono">
+                        Összes búzaszem az 1–{chessData.k}. mezőkön (2^{chessData.k} - 1):
+                      </div>
+                      <div className="text-xs sm:text-sm font-mono font-black text-yellow-300 break-all">
+                        {chessData.cumulativeGrainsExact} szem
+                      </div>
+                    </div>
+
+                    <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Össztömeg (40 mg/szem):</span>
+                      <span className="font-mono font-bold text-emerald-300">{chessData.cumulativeMassStr}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">Viszonyítva (700M t/év):</span>
+                      <span className="font-mono font-semibold text-amber-300 text-right">{chessData.harvestStr}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </main>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
